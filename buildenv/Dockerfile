@@ -8,3 +8,5 @@ RUN \
       build-essential cmake libncurses5-dev zlib1g-dev &&\
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
+WORKDIR /mnt
+ENV IN_CONTAINER=1

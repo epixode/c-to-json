@@ -7,7 +7,7 @@ output.
 The only requirements are docker and bash.  Run the following command to build
 an image used as the build environment:
 
-    docker build --tag llvm-build-env llvm-build-env
+    docker build --tag build_c-to-json buildenv
 
 The scripts step*.sh start a container and automate the build process:
 
