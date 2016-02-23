@@ -1,6 +1,5 @@
 
 BUILD_DIR = /mnt/build
-SRC_DIR = /mnt/src
 LLVM_SRC = $(BUILD_DIR)/llvm
 LLVM_BUILD = $(BUILD_DIR)/llvm-build
 
