@@ -4,8 +4,8 @@ This project produces an executable that takes a C program on its standard
 input and produces its abstract syntax tree (AST) as JSON on its standard
 output.
 
-The only requirements are docker and bash.  Run the following command to build
-an image used as the build environment:
+The only build requirements are docker and bash.  Run the following command
+to build the build environment docker image:
 
     docker build --tag build_c-to-json buildenv
 
