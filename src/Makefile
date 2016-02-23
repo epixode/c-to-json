@@ -4,9 +4,9 @@ SRC_DIR = /mnt/src
 LLVM_SRC = $(BUILD_DIR)/llvm
 LLVM_BUILD = $(BUILD_DIR)/llvm-build
 
-PROGRAM = $(BUILD_DIR)/cdump
+PROGRAM = $(BUILD_DIR)/c-to-json
 
-SRCS = cdump.cpp $(BUILD_DIR)/jsoncpp/dist/jsoncpp.cpp
+SRCS = main.cpp $(BUILD_DIR)/jsoncpp/dist/jsoncpp.cpp
 SRCSPRECOMP = precompiled.h
 
 CXX=g++
