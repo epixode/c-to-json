@@ -6,3 +6,4 @@ test "$1" = "--in-container" || exec docker run --rm --interactive --tty \
 
 cd /mnt/src
 make
+strip /mnt/build/cdump
