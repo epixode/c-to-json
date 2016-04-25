@@ -112,6 +112,13 @@ public:
     TraverseType(Expr->getType());
     return true;
   }
+  bool TraverseSynOrSemInitListExpr(clang::InitListExpr *S, clang::RecursiveASTVisitor<Dumper>::DataRecursionQueue *Q) {
+    // Limit traversal to the semantic form of the initializer.
+    if (S && S->isSemanticForm()) {
+      return Super::TraverseSynOrSemInitListExpr(S, Q);
+    }
+    return true;
+  }
 
   // Types
   bool VisitFunctionProtoType(clang::FunctionProtoType *Type) {
