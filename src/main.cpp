@@ -376,8 +376,12 @@ void parseTranslationUnit(void *data) {
   std::shared_ptr<clang::PCHContainerOperations> CO(new clang::PCHContainerOperations());
 
   // Diagnostics.
-  llvm::IntrusiveRefCntPtr<clang::DiagnosticsEngine>
-    Diags(clang::CompilerInstance::createDiagnostics(new clang::DiagnosticOptions));
+  llvm::IntrusiveRefCntPtr<clang::DiagnosticOptions> DiagOpts = new clang::DiagnosticOptions();
+  DiagOpts->ShowColors = true;
+  clang::TextDiagnosticPrinter *DiagClient =
+    new clang::TextDiagnosticPrinter(llvm::errs(), &*DiagOpts);
+  llvm::IntrusiveRefCntPtr<clang::DiagnosticsEngine> Diags(
+    clang::CompilerInstance::createDiagnostics(&*DiagOpts, DiagClient));
   llvm::CrashRecoveryContextCleanupRegistrar<clang::DiagnosticsEngine,
     llvm::CrashRecoveryContextReleaseRefCleanup<clang::DiagnosticsEngine> >
     DiagCleanup(Diags.get());
@@ -409,7 +413,7 @@ void parseTranslationUnit(void *data) {
     /*DiagnosticsEngine*/ Diags,
     /*ResourceFilesPath*/ llvm::StringRef(),
     /*OnlyLocalDecls*/ false,
-    /*CaptureDiagnostics*/ true,
+    /*CaptureDiagnostics*/ false,
     /*RemappedFiles*/ *RemappedFiles.get(),
     /*RemappedFilesKeepOriginalName*/ true,
     /*PrecompilePreamble*/ 0,
@@ -423,10 +427,7 @@ void parseTranslationUnit(void *data) {
     llvm::None,
     &ErrUnit));
 
-  if (NumErrors != Diags->getClient()->getNumErrors()) {
-    std::cerr << "diagnostics" << std::endl;
-    // TODO: print errors
-  } else {
+  if (NumErrors == Diags->getClient()->getNumErrors()) {
     clang::ASTContext& Context(Unit->getASTContext());
     clang::SourceManager& SM = Unit->getSourceManager();
     auto dumper = Dumper(Context, SM);
@@ -464,6 +465,5 @@ int main(int argc, char const * const * argv) {
     return 1;
   }
 
-  std::cerr << "done" << std::endl;
   return 0;
 }
