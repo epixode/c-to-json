@@ -43,6 +43,7 @@ LDFLAGS=\
 	-lLLVMMC \
 	-lLLVMMCParser \
 	-lLLVMOption \
+	-lLLVMProfileData \
 	-lLLVMSupport \
 	-lpthread \
 	-lncurses \
