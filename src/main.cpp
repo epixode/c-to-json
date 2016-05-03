@@ -372,6 +372,7 @@ struct ParseTranslationUnitInfo {
 
 void parseTranslationUnit(void *data) {
   ParseTranslationUnitInfo *PTUI = static_cast<ParseTranslationUnitInfo*>(data);
+  char const * sysroot = ::getenv("SYSROOT");
 
   std::shared_ptr<clang::PCHContainerOperations> CO(new clang::PCHContainerOperations());
 
@@ -402,6 +403,10 @@ void parseTranslationUnit(void *data) {
   Args->push_back("-fspell-checking");
   Args->push_back("-x");
   Args->push_back("c");
+  if (sysroot) {
+    Args->push_back("--sysroot");
+    Args->push_back(::getenv("SYSROOT"));
+  }
   Args->push_back(PTUI->SourceFilename.c_str());
   // Args->push_back("-Xclang");
 
