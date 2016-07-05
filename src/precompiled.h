@@ -13,6 +13,7 @@
 
 #include <clang/Basic/Version.h>
 #include <clang/Basic/Diagnostic.h>
+#include <clang/Basic/TargetInfo.h>
 #include <clang/Lex/Lexer.h>
 #include <clang/Frontend/ASTUnit.h>
 #include <clang/Frontend/CompilerInstance.h>

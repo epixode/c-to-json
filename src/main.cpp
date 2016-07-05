@@ -9,8 +9,10 @@ class Dumper : public clang::RecursiveASTVisitor<Dumper> {
   typedef clang::RecursiveASTVisitor<Dumper> Super;
 public:
   explicit Dumper (
+      clang::CompilerInstance& CI,
       clang::ASTContext& Context,
       clang::SourceManager& SourceManager) :
+    CI(CI),
     Context(Context),
     SourceManager(SourceManager),
     root(new Json::Value(Json::arrayValue)),
@@ -347,17 +349,19 @@ public:
 
   void setSourceRange(const clang::SourceRange & R) {
     if (!R.isInvalid()) {
-      auto EndLoc = R.getEnd();
-      unsigned Length = clang::Lexer::MeasureTokenLength(
-        SourceManager.getSpellingLoc(EndLoc), SourceManager, LangOpts);
-      (*node)[1]["begin"] = SourceManager.getFileOffset(R.getBegin());
-      (*node)[1]["end"] = SourceManager.getFileOffset(EndLoc.getLocWithOffset(Length));
+      auto SourceR = clang::CharSourceRange::getTokenRange(R);
+      auto FileR = clang::Lexer::makeFileCharRange(SourceR, SourceManager, LangOpts);
+      if (FileR.isValid()) {
+        (*node)[1]["begin"] = SourceManager.getFileOffset(FileR.getBegin());
+        (*node)[1]["end"] = SourceManager.getFileOffset(FileR.getEnd());
+      }
     }
   }
 
   Json::Value *root;
 private:
   unsigned nextId;
+  clang::CompilerInstance& CI;
   clang::ASTContext& Context;
   clang::SourceManager& SourceManager;
   clang::LangOptions LangOpts;
@@ -374,7 +378,12 @@ void parseTranslationUnit(void *data) {
   ParseTranslationUnitInfo *PTUI = static_cast<ParseTranslationUnitInfo*>(data);
   char const * sysroot = ::getenv("SYSROOT");
 
-  std::shared_ptr<clang::PCHContainerOperations> CO(new clang::PCHContainerOperations());
+  std::shared_ptr<clang::PCHContainerOperations> PCHContainerOps(
+    new clang::PCHContainerOperations());
+
+  // Create the compiler instance to use for building the AST.
+  std::unique_ptr<clang::CompilerInstance> CI(
+    new clang::CompilerInstance(PCHContainerOps));
 
   // Diagnostics.
   llvm::IntrusiveRefCntPtr<clang::DiagnosticOptions> DiagOpts = new clang::DiagnosticOptions();
@@ -387,6 +396,14 @@ void parseTranslationUnit(void *data) {
     llvm::CrashRecoveryContextReleaseRefCleanup<clang::DiagnosticsEngine> >
     DiagCleanup(Diags.get());
   unsigned NumErrors = Diags->getClient()->getNumErrors();
+  CI->setDiagnostics(Diags.get());
+
+  // Set a target.
+  std::shared_ptr<clang::TargetOptions> TargetOpts = std::make_shared<clang::TargetOptions>();
+  TargetOpts->Triple = llvm::sys::getDefaultTargetTriple();
+  clang::TargetInfo *TargetInfo = clang::TargetInfo::CreateTargetInfo(CI->getDiagnostics(), TargetOpts);
+  CI->setTarget(TargetInfo);
+  // CI-> createPreprocessor(clang::TU_Complete);
 
   // Remapped files.
   std::unique_ptr<std::vector<clang::ASTUnit::RemappedFile>> RemappedFiles(
@@ -414,7 +431,7 @@ void parseTranslationUnit(void *data) {
   std::unique_ptr<clang::ASTUnit> Unit(clang::ASTUnit::LoadFromCommandLine(
     /*ArgBegin*/ Args->data(),
     /*ArgEnd*/ Args->data() + Args->size(),
-    /*PCHContainerOps*/ CO,
+    /*PCHContainerOps*/ PCHContainerOps,
     /*DiagnosticsEngine*/ Diags,
     /*ResourceFilesPath*/ llvm::StringRef(),
     /*OnlyLocalDecls*/ false,
@@ -435,7 +452,7 @@ void parseTranslationUnit(void *data) {
   if (NumErrors == Diags->getClient()->getNumErrors()) {
     clang::ASTContext& Context(Unit->getASTContext());
     clang::SourceManager& SM = Unit->getSourceManager();
-    auto dumper = Dumper(Context, SM);
+    auto dumper = Dumper(*CI, Context, SM);
     dumper.TraverseDecl(
       static_cast<clang::Decl*>(Context.getTranslationUnitDecl()));
     std::unique_ptr<Json::FastWriter> writer(new Json::FastWriter());
