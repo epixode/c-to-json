@@ -220,6 +220,10 @@ public:
   bool VisitFloatingLiteral (const clang::FloatingLiteral *Expr) {
     llvm::SmallString<32> StrVal;
     Expr->getValue().toString(StrVal, 0, 0);
+    if (&Expr->getSemantics() == &CI.getTarget().getFloatFormat()) {
+      // Append 'f' to float literals.
+      StrVal += 'f';
+    }
     (*node)[1]["value"] = StrVal.str().str();
     return true;
   }
