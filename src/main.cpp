@@ -351,6 +351,12 @@ public:
     return true;
   }
 
+  bool VisitConstantArrayType (const clang::ConstantArrayType *T) {
+    llvm::APInt Size(T->getSize());
+    (*node)[1]["size"] = Size.toString(10, false);
+    return true;
+  };
+
   void setSourceRange(const clang::SourceRange & R) {
     if (!R.isInvalid()) {
       auto SourceR = clang::CharSourceRange::getTokenRange(R);
