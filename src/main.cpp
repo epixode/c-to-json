@@ -128,6 +128,11 @@ public:
       (*node)[1]["variadic"] = true;
     return true;
   }
+  bool VisitRecordType(clang::RecordType *Type) {
+    clang::RecordDecl * Decl = Type->getDecl();
+    (*node)[1]["name"] = Decl->getName().str();
+    return true;
+  }
 
   // Declarations
   bool VisitTranslationUnitDecl(const clang::TranslationUnitDecl *Decl) {
@@ -159,8 +164,14 @@ public:
   }
   // bool VisitTypeAliasDecl(const clang::TypeAliasDecl *Decl) { return true; }
   // bool VisitEnumDecl(const clang::EnumDecl *Decl) { return true; }
-  // bool VisitRecordDecl(const clang::RecordDecl *Decl) { return true; }
-  // bool VisitFieldDecl(const clang::FieldDecl *Decl) { return true; }
+  bool VisitRecordDecl(const clang::RecordDecl *Decl) {
+    (*node)[1]["name"] = Decl->getName().str();
+    return true;
+  }
+  bool VisitFieldDecl(const clang::FieldDecl *Decl) {
+    (*node)[1]["name"] = Decl->getName().str();
+    return true;
+  }
   // bool VisitEnumConstantDecl(const clang::EnumConstantDecl *Decl) { return true; };
   // bool VisitLabelDecl(const clang::LabelDecl *Decl) { return true; }
 
