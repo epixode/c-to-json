@@ -258,6 +258,12 @@ public:
   bool VisitParenExpr (const clang::ParenExpr *Expr) {
     return true;
   }
+  bool VisitMemberExpr (const clang::MemberExpr *Expr) {
+    if (Expr->isArrow()) {
+      (*node)[1]["isArrow"] = true;
+    }
+    return true;
+  }
   bool VisitUnaryOperator (const clang::UnaryOperator *Expr) {
     char const * name = 0;
     switch (Expr->getOpcode()) {
