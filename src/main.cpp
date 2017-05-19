@@ -24,6 +24,8 @@ public:
     (*node)[0] = "Root";
     (*node)[1] = Json::Value(Json::objectValue);
     (*node)[2] = Json::Value(Json::arrayValue);
+    auto stdinEntry = SourceManager.getFileManager().getFile("stdin");
+    stdinID = SourceManager.getOrCreateFileID(stdinEntry, clang::SrcMgr::C_User);
   }
 
   Json::Value& getTranslationUnit() const {
@@ -375,13 +377,19 @@ public:
   };
 
   void setSourceRange(const clang::SourceRange & R) {
-    if (!R.isInvalid()) {
-      auto SourceR = clang::CharSourceRange::getTokenRange(R);
-      auto FileR = clang::Lexer::makeFileCharRange(SourceR, SourceManager, LangOpts);
-      if (FileR.isValid()) {
-        (*node)[1]["begin"] = SourceManager.getFileOffset(FileR.getBegin());
-        (*node)[1]["end"] = SourceManager.getFileOffset(FileR.getEnd());
-      }
+    if (R.isInvalid()) {
+      return;
+    }
+    /* Only add locations for STDIN */
+    auto fileID = SourceManager.getFileID(R.getBegin());
+    if (stdinID != fileID) {
+      return;
+    }
+    auto SourceR = clang::CharSourceRange::getTokenRange(R);
+    auto FileR = clang::Lexer::makeFileCharRange(SourceR, SourceManager, LangOpts);
+    if (FileR.isValid()) {
+      (*node)[1]["begin"] = SourceManager.getFileOffset(FileR.getBegin());
+      (*node)[1]["end"] = SourceManager.getFileOffset(FileR.getEnd());
     }
   }
 
@@ -395,7 +403,9 @@ private:
   clang::PrintingPolicy pp;
   std::unique_ptr<Json::Value> node;
   std::vector<std::unique_ptr<Json::Value>> parents;
+  clang::FileID stdinID;
 };
+
 struct ParseTranslationUnitInfo {
   std::string SourceFilename;
   llvm::MemoryBuffer * SourceBuffer;
