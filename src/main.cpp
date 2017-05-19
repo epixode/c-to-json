@@ -492,11 +492,8 @@ void parseTranslationUnit(void *data) {
 }
 
 int main(int argc, char const * const * argv) {
-  ParseTranslationUnitInfo PTUI;
 
-  // PTUI.SourceFilename = argv[1];
-  // auto SourceBuffer = llvm::MemoryBuffer::getFile(PTUI.SourceFilename);
-
+  // auto SourceBuffer = llvm::MemoryBuffer::getFile("test.c");
   auto SourceBuffer = llvm::MemoryBuffer::getSTDIN();
 
   if (std::error_code ec = SourceBuffer.getError()) {
@@ -504,6 +501,7 @@ int main(int argc, char const * const * argv) {
     return 1;
   }
 
+  ParseTranslationUnitInfo PTUI;
   PTUI.SourceFilename = "stdin";
   PTUI.SourceBuffer = SourceBuffer->release();
 
