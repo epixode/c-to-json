@@ -3,12 +3,12 @@ class Dumper : public clang::RecursiveASTVisitor<Dumper> {
   typedef clang::RecursiveASTVisitor<Dumper> Super;
 public:
   explicit Dumper (
-      clang::CompilerInstance& CI,
       clang::ASTContext& Context,
-      clang::SourceManager& SourceManager) :
-    CI(CI),
+      clang::SourceManager& SourceManager,
+      clang::FileID userFileID) :
     Context(Context),
     SourceManager(SourceManager),
+    userFileID(userFileID),
     root(new Json::Value(Json::arrayValue)),
     node(root),
     LangOpts(),
@@ -18,8 +18,6 @@ public:
     (*node)[0] = "Root";
     (*node)[1] = Json::Value(Json::objectValue);
     (*node)[2] = Json::Value(Json::arrayValue);
-    auto stdinEntry = SourceManager.getFileManager().getFile("stdin");
-    stdinID = SourceManager.getOrCreateFileID(stdinEntry, clang::SrcMgr::C_User);
   }
 
   Json::Value& getTranslationUnit() const {
@@ -239,7 +237,7 @@ public:
   bool VisitFloatingLiteral (const clang::FloatingLiteral *Expr) {
     llvm::SmallString<32> StrVal;
     Expr->getValue().toString(StrVal, 0, 0);
-    if (&Expr->getSemantics() == &CI.getTarget().getFloatFormat()) {
+    if (&Expr->getSemantics() == &Context.getTargetInfo().getFloatFormat()) {
       // Append 'f' to float literals.
       StrVal += 'f';
     }
@@ -393,7 +391,7 @@ public:
     }
     /* Only add locations for STDIN */
     auto fileID = SourceManager.getFileID(R.getBegin());
-    if (stdinID != fileID) {
+    if (userFileID != fileID) {
       return;
     }
     auto SourceR = clang::CharSourceRange::getTokenRange(R);
@@ -407,31 +405,55 @@ public:
   Json::Value *root;
 private:
   unsigned nextId;
-  clang::CompilerInstance& CI;
   clang::ASTContext& Context;
   clang::SourceManager& SourceManager;
   clang::LangOptions LangOpts;
   clang::PrintingPolicy pp;
   std::unique_ptr<Json::Value> node;
   std::vector<std::unique_ptr<Json::Value>> parents;
-  clang::FileID stdinID;
+  clang::FileID userFileID;
 };
 
 struct ParseTranslationUnitInfo {
-  std::string SourceFilename;
   llvm::MemoryBuffer * SourceBuffer;
+  llvm::MemoryBuffer * WrapperBuffer;
+  char const * sysroot;
 };
 
 void parseTranslationUnit(void *data) {
   ParseTranslationUnitInfo *PTUI = static_cast<ParseTranslationUnitInfo*>(data);
-  char const * sysroot = ::getenv("SYSROOT");
+
+  // Args.
+  std::unique_ptr<std::vector<const char *>> Args(
+      new std::vector<const char *>());
+  llvm::CrashRecoveryContextCleanupRegistrar<std::vector<const char*> >
+    ArgsCleanup(Args.get());
+  Args->push_back("-fspell-checking");
+  Args->push_back("-x");
+  Args->push_back("c++");
+  Args->push_back("-Wuninitialized");
+  if (PTUI->sysroot) {
+    Args->push_back("--sysroot");
+    Args->push_back(PTUI->sysroot);
+  }
+  // Args->push_back("-Xclang");
+
+  // File remapping.
+  std::unique_ptr<std::vector<clang::ASTUnit::RemappedFile>> RemappedFiles(
+      new std::vector<clang::ASTUnit::RemappedFile>());
+  llvm::CrashRecoveryContextCleanupRegistrar<
+    std::vector<clang::ASTUnit::RemappedFile> > RemappedCleanup(RemappedFiles.get());
+  char const * userFileName = "/user-input";
+  char const * mainFileName = userFileName;
+  if (PTUI->WrapperBuffer) {
+    mainFileName = "wrapper";
+    RemappedFiles->push_back(std::make_pair(mainFileName, PTUI->WrapperBuffer));
+  }
+  RemappedFiles->push_back(std::make_pair(userFileName, PTUI->SourceBuffer));
+  Args->push_back(mainFileName);
 
   std::shared_ptr<clang::PCHContainerOperations> PCHContainerOps(
     new clang::PCHContainerOperations());
-
-  // Create the compiler instance to use for building the AST.
-  std::unique_ptr<clang::CompilerInstance> CI(
-    new clang::CompilerInstance(PCHContainerOps));
 
   // Diagnostics.
   llvm::IntrusiveRefCntPtr<clang::DiagnosticOptions> DiagOpts = new clang::DiagnosticOptions();
@@ -444,37 +466,6 @@ void parseTranslationUnit(void *data) {
     llvm::CrashRecoveryContextReleaseRefCleanup<clang::DiagnosticsEngine> >
     DiagCleanup(Diags.get());
   unsigned NumErrors = Diags->getClient()->getNumErrors();
-  CI->setDiagnostics(Diags.get());
-
-  // Set a target.
-  std::shared_ptr<clang::TargetOptions> TargetOpts = std::make_shared<clang::TargetOptions>();
-  TargetOpts->Triple = llvm::sys::getDefaultTargetTriple();
-  clang::TargetInfo *TargetInfo = clang::TargetInfo::CreateTargetInfo(CI->getDiagnostics(), TargetOpts);
-  CI->setTarget(TargetInfo);
-  // CI-> createPreprocessor(clang::TU_Complete);
-
-  // Remapped files.
-  std::unique_ptr<std::vector<clang::ASTUnit::RemappedFile>> RemappedFiles(
-      new std::vector<clang::ASTUnit::RemappedFile>());
-  llvm::CrashRecoveryContextCleanupRegistrar<
-    std::vector<clang::ASTUnit::RemappedFile> > RemappedCleanup(RemappedFiles.get());
-  RemappedFiles->push_back(std::make_pair(PTUI->SourceFilename, PTUI->SourceBuffer));
-
-  // Args.
-  std::unique_ptr<std::vector<const char *>> Args(
-      new std::vector<const char *>());
-  llvm::CrashRecoveryContextCleanupRegistrar<std::vector<const char*> >
-    ArgsCleanup(Args.get());
-  Args->push_back("-fspell-checking");
-  Args->push_back("-x");
-  Args->push_back("c++");
-  Args->push_back("-Wuninitialized");
-  if (sysroot) {
-    Args->push_back("--sysroot");
-    Args->push_back(::getenv("SYSROOT"));
-  }
-  Args->push_back(PTUI->SourceFilename.c_str());
-  // Args->push_back("-Xclang");
 
   std::unique_ptr<clang::ASTUnit> ErrUnit;
   std::unique_ptr<clang::ASTUnit> Unit(clang::ASTUnit::LoadFromCommandLine(
@@ -500,8 +491,10 @@ void parseTranslationUnit(void *data) {
 
   if (NumErrors == Diags->getClient()->getNumErrors()) {
     clang::ASTContext& Context(Unit->getASTContext());
-    clang::SourceManager& SM = Unit->getSourceManager();
-    auto dumper = Dumper(*CI, Context, SM);
+    clang::SourceManager& SM(Unit->getSourceManager());
+    auto userFileEntry = SM.getFileManager().getFile(userFileName);
+    auto userFileID = SM.getOrCreateFileID(userFileEntry, clang::SrcMgr::C_User);
+    auto dumper = Dumper(Context, SM, userFileID);
     dumper.TraverseDecl(
       static_cast<clang::Decl*>(Context.getTranslationUnitDecl()));
     std::unique_ptr<Json::FastWriter> writer(new Json::FastWriter());
@@ -515,17 +508,28 @@ void parseTranslationUnit(void *data) {
 
 int main(int argc, char const * const * argv) {
 
-  // auto SourceBuffer = llvm::MemoryBuffer::getFile("test.c");
-  auto SourceBuffer = llvm::MemoryBuffer::getSTDIN();
+  ParseTranslationUnitInfo PTUI;
 
+  PTUI.sysroot = ::getenv("SYSROOT");
+
+  auto SourceBuffer = llvm::MemoryBuffer::getSTDIN();
   if (std::error_code ec = SourceBuffer.getError()) {
     std::cerr << "error reading file" << std::endl;
     return 1;
   }
-
-  ParseTranslationUnitInfo PTUI;
-  PTUI.SourceFilename = "stdin";
   PTUI.SourceBuffer = SourceBuffer->release();
+
+  char const * wrapper = ::getenv("SOURCE_WRAPPER");
+  if (wrapper) {
+    auto WrapperBuffer = llvm::MemoryBuffer::getFile(wrapper);
+    if (std::error_code ec = WrapperBuffer.getError()) {
+      std::cerr << "error reading wrapper" << std::endl;
+      return 1;
+    }
+    PTUI.WrapperBuffer = WrapperBuffer->release();
+  } else {
+    PTUI.WrapperBuffer = 0;
+  }
 
   llvm::CrashRecoveryContext CRC;
   unsigned size = 8<<20;  // 8 MB
