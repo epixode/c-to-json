@@ -473,7 +473,8 @@ void parseTranslationUnit(void *data) {
     ArgsCleanup(Args.get());
   Args->push_back("-fspell-checking");
   Args->push_back("-x");
-  Args->push_back("c");
+  Args->push_back("c++");
+  Args->push_back("-Wuninitialized");
   if (sysroot) {
     Args->push_back("--sysroot");
     Args->push_back(::getenv("SYSROOT"));
