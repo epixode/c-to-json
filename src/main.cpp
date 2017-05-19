@@ -1,10 +1,4 @@
 
-void printJson(Json::Value * value) {
-  std::unique_ptr<Json::FastWriter> writer(new Json::FastWriter());
-  writer->omitEndingLineFeed();
-  std::cout << writer->write(*value) << std::endl;
-}
-
 class Dumper : public clang::RecursiveASTVisitor<Dumper> {
   typedef clang::RecursiveASTVisitor<Dumper> Super;
 public:
