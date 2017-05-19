@@ -194,6 +194,15 @@ public:
     return true;
   }
   bool VisitForStmt (const clang::ForStmt *Stmt) {
+    if (!Stmt->getInit()) {
+      (*node)[1]["noInit"] = true;
+    }
+    if (!Stmt->getCond()) {
+      (*node)[1]["noCond"] = true;
+    }
+    if (!Stmt->getInc()) {
+      (*node)[1]["noInc"] = true;
+    }
     return true;
   }
   bool VisitDoStmt (const clang::DoStmt *Stmt) {
