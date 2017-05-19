@@ -101,7 +101,10 @@ public:
     setSourceRange(NameInfo.getSourceRange());
     // In C all names are simple identifiers.
     Super::TraverseDeclarationNameInfo(NameInfo);
-    (*node)[1]["identifier"] = NameInfo.getName().getAsIdentifierInfo()->getName().str();
+    auto IdentInfo = NameInfo.getName().getAsIdentifierInfo();
+    if (IdentInfo) {
+      (*node)[1]["identifier"] = IdentInfo->getName().str();
+    }
     EndNode();
     return true;
   }
