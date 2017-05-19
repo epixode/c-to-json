@@ -371,6 +371,11 @@ public:
   bool VisitTypoExpr (const clang::TypoExpr *Expr) {
     return true;
   }
+  bool VisitCXXConstructorExpr (const clang::CXXConstructorExpr *Expr) {
+    auto Constructor = Expr->getConstructor();
+    /* (*node)[1]["declId"] = …  TODO: find id of construtor decl */
+    return true;
+  }
   // bool VisitParenListExpr (const clang::ParenListExpr *Expr) { return true; };
   // bool VisitNoInitExpr (const clang::NoInitExpr *Expr) { return true; };
   // bool VisitPredefinedExpr (const clang::PredefinedExpr *Expr) { return true; };
