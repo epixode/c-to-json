@@ -365,7 +365,7 @@ public:
   bool VisitTypoExpr (const clang::TypoExpr *Expr) {
     return true;
   }
-  bool VisitCXXConstructorExpr (const clang::CXXConstructorExpr *Expr) {
+  bool VisitCXXConstructExpr (const clang::CXXConstructExpr *Expr) {
     auto Constructor = Expr->getConstructor();
     /* (*node)[1]["declId"] = …  TODO: find id of construtor decl */
     return true;
