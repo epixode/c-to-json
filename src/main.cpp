@@ -430,7 +430,7 @@ void parseTranslationUnit(void *data) {
     ArgsCleanup(Args.get());
   Args->push_back("-fspell-checking");
   Args->push_back("-x");
-  Args->push_back("c++");
+  Args->push_back(::getenv("LANGUAGE"));
   Args->push_back("-Wuninitialized");
   if (PTUI->sysroot) {
     Args->push_back("--sysroot");
@@ -484,6 +484,7 @@ void parseTranslationUnit(void *data) {
     /*IncludeBriefCommentsInCodeCompletion*/ false,
     /*AllowPCHWithCompilerErrors=*/ false,
     /*SkipFunctionBodies*/ false,
+    /*SingleFileParse*/ true,
     /*UserFilesAreVolatile*/ true,
     /*ForSerialization*/ false,
     llvm::None,

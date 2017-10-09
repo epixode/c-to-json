@@ -40,6 +40,7 @@ LDFLAGS=\
 	-lLLVMAsmParser \
 	-lLLVMBitReader \
 	-lLLVMCore \
+	-lLLVMBinaryFormat \
 	-lLLVMMC \
 	-lLLVMMCParser \
 	-lLLVMOption \
