@@ -483,7 +483,7 @@ void parseTranslationUnit(void *data) {
     /*CacheCodeCompletionResults*/ false,
     /*IncludeBriefCommentsInCodeCompletion*/ false,
     /*AllowPCHWithCompilerErrors=*/ false,
-    /*SkipFunctionBodies*/ false,
+    /*SkipFunctionBodies*/ clang::SkipFunctionBodiesScope::None,
     /*SingleFileParse*/ true,
     /*UserFilesAreVolatile*/ true,
     /*ForSerialization*/ false,

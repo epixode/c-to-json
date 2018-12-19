@@ -37,6 +37,7 @@ LDFLAGS=\
 	-lclangAST \
 	-lclangLex \
 	-lclangBasic \
+	-Wl,--start-group \
 	-lLLVMAsmParser \
 	-lLLVMBitReader \
 	-lLLVMCore \
@@ -46,6 +47,8 @@ LDFLAGS=\
 	-lLLVMOption \
 	-lLLVMProfileData \
 	-lLLVMSupport \
+	-lLLVMDemangle \
+	-Wl,--end-group \
 	-lpthread \
 	-lncurses \
 	-ldl \
